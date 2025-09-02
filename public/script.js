@@ -1,7 +1,5 @@
-// यह Frontend का JavaScript है जो Backend से बात करता है।
-
-// Backend का पता (अभी यह लोकल है, बाद में इसे बदलेंगे)
-const API_BASE_URL = 'https://earning-website-backend.onrender.com'; // इसे खाली छोड़ दें, क्योंकि यह उसी सर्वर पर है
+// Backend का पता
+const API_BASE_URL = 'https://earning-website-backend.onrender.com';
 
 let authToken = null;
 
@@ -49,7 +47,7 @@ const updateUI = (userData) => {
         activityLogList.innerHTML = '';
         userData.activity.forEach(log => {
             const li = document.createElement('li');
-            li.textContent = log;
+li.textContent = log;
             activityLogList.prepend(li);
         });
     } else {

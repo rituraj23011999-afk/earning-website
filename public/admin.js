@@ -1,5 +1,5 @@
 document.addEventListener('DOMContentLoaded', () => {
-    console.log("Admin page script loaded."); // यह चेक करने के लिए कि फाइल लोड हुई है
+    console.log("Admin page script loaded.");
 
     const loginSection = document.getElementById('admin-login');
     const dashboardSection = document.getElementById('admin-dashboard');
@@ -7,20 +7,21 @@ document.addEventListener('DOMContentLoaded', () => {
     const usersTableBody = document.querySelector('#users-table tbody');
     const userModal = document.getElementById('user-modal');
     
+    // Backend का पता
+    const API_BASE_URL = 'https://earning-website-backend.onrender.com';
+
     let adminPassword = sessionStorage.getItem('adminPassword');
 
     async function apiCall(endpoint, body) {
-        console.log(`Calling API: ${endpoint}`); // API कॉल को ट्रैक करने के लिए
+        console.log(`Calling API: ${API_BASE_URL}${endpoint}`);
         try {
-            const response = await fetch(endpoint, {
+            const response = await fetch(`${API_BASE_URL}${endpoint}`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ ...body, password: adminPassword })
             });
             const data = await response.json();
-            if (!response.ok) {
-                throw new Error(data.message || "Unknown error");
-            }
+            if (!response.ok) throw new Error(data.message || "Unknown error");
             return data;
         } catch (error) {
             console.error(`API Error on ${endpoint}:`, error);
@@ -44,21 +45,20 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     loginBtn.addEventListener('click', async () => {
-        console.log("Login button clicked!"); // यह चेक करने के लिए कि बटन काम कर रहा है
+        console.log("Login button clicked!");
         const password = document.getElementById('admin-password').value;
         const loginErrorEl = document.getElementById('login-error');
         loginErrorEl.textContent = '';
 
         try {
-            const response = await fetch('/admin/login', {
+            // लॉगिन के लिए API कॉल
+            const response = await fetch(`${API_BASE_URL}/admin/login`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ password })
             });
             const result = await response.json();
-            if (!response.ok) {
-                throw new Error(result.message);
-            }
+            if (!response.ok) throw new Error(result.message);
             
             adminPassword = password;
             sessionStorage.setItem('adminPassword', password);
@@ -71,8 +71,8 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
     
+    // बाकी का कोड पहले जैसा ही रहेगा...
     document.getElementById('refresh-btn').addEventListener('click', fetchAndDisplayUsers);
-
     usersTableBody.addEventListener('click', async (e) => {
         if (!e.target.classList.contains('manage-btn')) return;
         const username = e.target.dataset.username;
@@ -92,7 +92,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 <ul>${user.redeemRequests.length > 0 ? user.redeemRequests.map(req => `<li>${req.diamonds} diamonds for FF ID: ${req.ffId}</li>`).join('') : '<li>No requests</li>'}</ul>
             `;
             userModal.style.display = 'flex';
-            
             document.getElementById('update-coins-btn').addEventListener('click', async () => {
                 const newCoinValue = document.getElementById('new-coin-value').value;
                 const reason = document.getElementById('update-reason').value || 'Admin adjustment';
@@ -103,9 +102,7 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         }
     });
-
     userModal.querySelector('.modal-close').addEventListener('click', () => userModal.style.display = 'none');
-    
     if (adminPassword) {
         loginSection.style.display = 'none';
         dashboardSection.style.display = 'block';
