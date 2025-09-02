@@ -1,7 +1,7 @@
 // यह Frontend का JavaScript है जो Backend से बात करता है।
 
 // Backend का पता (अभी यह लोकल है, बाद में इसे बदलेंगे)
-const API_BASE_URL = ''; // इसे खाली छोड़ दें, क्योंकि यह उसी सर्वर पर है
+const API_BASE_URL = 'https://earning-website-backend.onrender.com'; // इसे खाली छोड़ दें, क्योंकि यह उसी सर्वर पर है
 
 let authToken = null;
 
