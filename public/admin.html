@@ -1,0 +1,96 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>Admin Panel</title><style>:root{--bg-color:#12121c;--card-bg:#1f1f2d;--primary-accent:#7b42f6;--text-primary:#ffffff;--text-secondary:#a0a0b0;--border-color:#2c2c40}body{font-family:sans-serif;background-color:var(--bg-color);color:var(--text-primary);margin:0;padding:20px}.login-container,.dashboard-container{max-width:1000px;margin:auto}h1,h2{color:var(--primary-accent)}input,button{width:100%;padding:12px;margin-bottom:10px;border-radius:8px;border:1px solid var(--border-color);background-color:var(--card-bg);color:var(--text-primary);font-size:16px}button{cursor:pointer;background-color:var(--primary-accent);font-weight:bold}.error-msg{color:#f44336}header{display:flex;justify-content:space-between;align-items:center}table{width:100%;border-collapse:collapse;margin-top:20px}th,td{padding:12px;text-align:left;border-bottom:1px solid var(--border-color)}th{background-color:var(--card-bg)}.modal-overlay{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.7);display:flex;justify-content:center;align-items:center}.modal-content{background:var(--card-bg);padding:30px;border-radius:12px;width:90%;max-width:500px;position:relative;max-height:80vh;overflow-y:auto}.modal-close{position:absolute;top:10px;right:15px;background:none;border:none;color:white;font-size:24px;cursor:pointer}#modal-body ul{list-style:none;padding:0;margin-top:15px}#modal-body li{background:var(--bg-color);padding:8px;border-radius:4px;margin-bottom:5px;font-size:14px}</style></head><body><div id="admin-login" class="login-container"><h1>Admin Panel Login</h1><input type="password" id="admin-password" placeholder="Enter Admin Password"><button id="admin-login-btn">Login</button><p id="login-error" class="error-msg"></p></div><div id="admin-dashboard" class="dashboard-container" style="display: none;"><header><h1>Admin Dashboard</h1><button id="refresh-btn">Refresh Data</button></header><main><h2>All Users</h2><table id="users-table"><thead><tr><th>Username</th><th>Coins</th><th>Actions</th></tr></thead><tbody></tbody></table></main></div><div id="user-modal" class="modal-overlay" style="display: none;"><div class="modal-content"><button class="modal-close">&times;</button><h2 id="modal-username">User Details</h2><div id="modal-body"></div></div></div><script src="admin.js"></script></body></html>```
+---
+
+### स्टेप 7: `public/admin.js` फाइल में कोड डालें
+`public` फोल्डर के अंदर `admin.js` पर क्लिक करें और यह कोड पेस्ट कर दें:
+```javascript
+document.addEventListener('DOMContentLoaded', () => {
+    const loginSection = document.getElementById('admin-login');
+    const dashboardSection = document.getElementById('admin-dashboard');
+    const loginBtn = document.getElementById('admin-login-btn');
+    const usersTableBody = document.querySelector('#users-table tbody');
+    const userModal = document.getElementById('user-modal');
+    
+    let adminPassword = sessionStorage.getItem('adminPassword');
+
+    async function apiCall(endpoint, body) {
+        const response = await fetch(endpoint, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ ...body, password: adminPassword })
+        });
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.message);
+        return data;
+    }
+
+    async function fetchAndDisplayUsers() {
+        if (!adminPassword) return;
+        try {
+            const users = await apiCall('/admin/dashboard-data', {});
+            usersTableBody.innerHTML = '';
+            for (const username in users) {
+                const user = users[username];
+                const row = document.createElement('tr');
+                row.innerHTML = `<td>${username}</td><td>${user.coins}</td><td><button class="manage-btn" data-username="${username}">Manage</button></td>`;
+                usersTableBody.appendChild(row);
+            }
+        } catch (error) { alert(`Failed to fetch data: ${error.message}`); }
+    }
+
+    loginBtn.addEventListener('click', async () => {
+        const password = document.getElementById('admin-password').value;
+        try {
+            await fetch('/admin/login', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ password })
+            }).then(res => { if (!res.ok) throw new Error("Login failed"); });
+            adminPassword = password;
+            sessionStorage.setItem('adminPassword', password);
+            loginSection.style.display = 'none';
+            dashboardSection.style.display = 'block';
+            fetchAndDisplayUsers();
+        } catch (error) { document.getElementById('login-error').textContent = error.message; }
+    });
+    
+    document.getElementById('refresh-btn').addEventListener('click', fetchAndDisplayUsers);
+
+    usersTableBody.addEventListener('click', async (e) => {
+        if (!e.target.classList.contains('manage-btn')) return;
+        const username = e.target.dataset.username;
+        const users = await apiCall('/admin/dashboard-data', {});
+        const user = users[username];
+        
+        document.getElementById('modal-username').textContent = `Manage: ${username}`;
+        document.getElementById('modal-body').innerHTML = `
+            <h4>Update Coins</h4>
+            <input type="number" id="new-coin-value" value="${user.coins}">
+            <input type="text" id="update-reason" placeholder="Reason for change">
+            <button id="update-coins-btn">Update Coins</button>
+            <hr style="margin: 20px 0;">
+            <h4>Activity Log</h4>
+            <ul>${user.activity.map(log => `<li>${log}</li>`).join('')}</ul>
+            <h4>Redeem Requests</h4>
+            <ul>${user.redeemRequests.length > 0 ? user.redeemRequests.map(req => `<li>${req.diamonds} diamonds for FF ID: ${req.ffId}</li>`).join('') : '<li>No requests</li>'}</ul>
+        `;
+        userModal.style.display = 'flex';
+        
+        document.getElementById('update-coins-btn').addEventListener('click', async () => {
+            const newCoinValue = document.getElementById('new-coin-value').value;
+            const reason = document.getElementById('update-reason').value || 'Admin adjustment';
+            await apiCall('/admin/update-user', { username, newCoinValue, reason });
+            alert('User updated!');
+            userModal.style.display = 'none';
+            fetchAndDisplayUsers();
+        });
+    });
+
+    userModal.querySelector('.modal-close').addEventListener('click', () => userModal.style.display = 'none');
+    
+    if (adminPassword) {
+        loginSection.style.display = 'none';
+        dashboardSection.style.display = 'block';
+        fetchAndDisplayUsers();
+    }
+});
